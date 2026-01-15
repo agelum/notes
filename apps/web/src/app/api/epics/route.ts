@@ -115,6 +115,20 @@ state: ${state}
   }
 }
 
+function findEpicFile(baseDir: string, epicId: string): string | null {
+  if (!fs.existsSync(baseDir)) return null
+  
+  const items = fs.readdirSync(baseDir, { withFileTypes: true })
+  
+  for (const item of items) {
+    if (item.isFile() && item.name === `${epicId}.md`) {
+      return path.join(baseDir, item.name)
+    }
+  }
+  
+  return null
+}
+
 function moveEpic(repo: string, epicId: string, fromState: string, toState: string): void {
   const homeDir = (process.env.HOME || process.env.USERPROFILE || process.cwd())
   const gitDir = path.join(homeDir, 'git')
@@ -122,11 +136,16 @@ function moveEpic(repo: string, epicId: string, fromState: string, toState: stri
   ensureEpicStructure(agelumDir)
   const epicsDir = path.join(agelumDir, 'epics')
 
-  const fromPath = path.join(epicsDir, fromState, `${epicId}.md`)
-  const toPath = path.join(epicsDir, toState, `${epicId}.md`)
+  const fromStateDir = path.join(epicsDir, fromState)
+  const fromPath = findEpicFile(fromStateDir, epicId)
+  
+  if (!fromPath) {
+    throw new Error(`Epic file not found: ${epicId}`)
+  }
 
-  const toDir = path.dirname(toPath)
-  fs.mkdirSync(toDir, { recursive: true })
+  const toStateDir = path.join(epicsDir, toState)
+  fs.mkdirSync(toStateDir, { recursive: true })
+  const toPath = path.join(toStateDir, `${epicId}.md`)
 
   fs.renameSync(fromPath, toPath)
 }
@@ -164,6 +183,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to process epic' }, { status: 500 })
+    console.error('Epic API error:', error)
+    const message = error instanceof Error ? error.message : 'Failed to process epic'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

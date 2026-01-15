@@ -6,6 +6,7 @@ import FileBrowser from "@/components/FileBrowser";
 import FileViewer from "@/components/FileViewer";
 import TaskKanban from "@/components/TaskKanban";
 import EpicsKanban from "@/components/EpicsKanban";
+import TestKanban from "@/components/TestKanban";
 import { Kanban, Files, FolderOpen, Layers } from "lucide-react";
 
 interface FileNode {
@@ -166,28 +167,22 @@ export default function Home() {
               <FileViewer file={selectedFile} />
             </>
           ) : viewMode === "epics" ? (
-            <div className="flex-1 flex">
-              <div className="flex-1 bg-background">
-                {selectedRepo && (
-                  <EpicsKanban
-                    repo={selectedRepo}
-                    onEpicSelect={handleEpicSelect}
-                  />
-                )}
-              </div>
-              <FileViewer file={selectedFile} />
+            <div className="flex-1 bg-background">
+              {selectedRepo && (
+                <EpicsKanban
+                  repo={selectedRepo}
+                  onEpicSelect={handleEpicSelect}
+                />
+              )}
             </div>
           ) : (
-            <div className="flex-1 flex">
-              <div className="flex-1 bg-background">
-                {selectedRepo && (
-                  <TaskKanban
-                    repo={selectedRepo}
-                    onTaskSelect={handleTaskSelect}
-                  />
-                )}
-              </div>
-              <FileViewer file={selectedFile} />
+            <div className="flex-1 bg-background">
+              {selectedRepo && (
+                <TaskKanban
+                  repo={selectedRepo}
+                  onTaskSelect={handleTaskSelect}
+                />
+              )}
             </div>
           )}
         </div>

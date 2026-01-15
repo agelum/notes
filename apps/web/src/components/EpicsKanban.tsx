@@ -17,7 +17,7 @@ const epicSchema: TableSchema = {
   fields: [
     { id: 'title', name: 'Title', type: 'text', isPrimary: true },
     { id: 'description', name: 'Description', type: 'text' },
-    { id: 'state', name: 'Status', type: 'select', options: [
+    { id: 'status', name: 'Status', type: 'select', options: [
       { id: 'pending', name: 'Pending', color: 'yellow' },
       { id: 'doing', name: 'Doing', color: 'blue' },
       { id: 'done', name: 'Done', color: 'green' }
@@ -48,7 +48,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
   const createRecord = useCallback(async (record: Partial<IRecord>): Promise<IRecord> => {
     const title = record.fields?.title as string || 'Untitled Epic'
     const description = record.fields?.description as string || ''
-    const state = (record.fields?.state as string) || 'pending'
+    const state = (record.fields?.status as string) || 'pending'
 
     const res = await fetch('/api/epics', {
       method: 'POST',
@@ -70,7 +70,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
       fields: {
         title: data.epic.title,
         description: data.epic.description,
-        state: data.epic.state,
+        status: data.epic.state,
         createdAt: data.epic.createdAt
       },
       createdAt: data.epic.createdAt
@@ -81,7 +81,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
     const epic = epics.find(e => e.id === id)
     if (!epic) throw new Error('Epic not found')
 
-    const newState = record.fields?.state as string
+    const newState = record.fields?.status as string
     const fromState = epic.state
 
     if (newState && newState !== fromState) {
@@ -118,16 +118,40 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
 
   const dbClient: IDataViewsClient = {
     getRecords: async () => {
-      return epics.map(epic => ({
-        id: epic.id,
-        fields: {
-          title: epic.title,
-          description: epic.description,
-          state: epic.state,
-          createdAt: epic.createdAt
+      const debugEpics: Epic[] = [
+        {
+          id: 'debug-pending',
+          title: 'Debug Pending Epic',
+          description: 'Hardcoded pending epic for kanban test.',
+          state: 'pending',
+          createdAt: new Date().toISOString()
         },
-        createdAt: epic.createdAt
-      }))
+        {
+          id: 'debug-doing',
+          title: 'Debug Doing Epic',
+          description: 'Hardcoded doing epic for kanban test.',
+          state: 'doing',
+          createdAt: new Date().toISOString()
+        }
+      ]
+      const combinedEpics = [...epics, ...debugEpics]
+      const records = combinedEpics.map(epic => {
+        console.log(`Epic ${epic.id}: state="${epic.state}", type=${typeof epic.state}`)
+        return {
+          id: epic.id,
+          fields: {
+            title: epic.title,
+            description: `${epic.description}\n\nStatus: ${epic.state}`,
+            status: epic.state,
+            createdAt: epic.createdAt
+          },
+          createdAt: epic.createdAt
+        }
+      })
+      console.log('Epics records:', JSON.stringify(records, null, 2))
+      console.log('Epics schema:', JSON.stringify(epicSchema, null, 2))
+      console.log('Schema status options:', epicSchema.fields.find(f => f.id === 'status'))
+      return records
     },
     createRecord,
     updateRecord,
@@ -143,6 +167,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
           defaultView: 'kanban',
           language: 'en'
         }}
+        key={refreshKey}
       />
     </div>
   )

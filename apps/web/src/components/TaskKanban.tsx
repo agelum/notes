@@ -19,7 +19,7 @@ const taskSchema: TableSchema = {
     { id: 'title', name: 'Title', type: 'text', isPrimary: true },
     { id: 'description', name: 'Description', type: 'text' },
     { id: 'epic', name: 'Epic', type: 'text' },
-    { id: 'state', name: 'Status', type: 'select', options: [
+    { id: 'status', name: 'Status', type: 'select', options: [
       { id: 'pending', name: 'Pending', color: 'yellow' },
       { id: 'doing', name: 'Doing', color: 'blue' },
       { id: 'done', name: 'Done', color: 'green' }
@@ -50,7 +50,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
   const createRecord = useCallback(async (record: Partial<IRecord>): Promise<IRecord> => {
     const title = record.fields?.title as string || 'Untitled Task'
     const description = record.fields?.description as string || ''
-    const state = (record.fields?.state as string) || 'pending'
+    const state = (record.fields?.status as string) || 'pending'
 
     const res = await fetch('/api/tasks', {
       method: 'POST',
@@ -72,7 +72,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
       fields: {
         title: data.task.title,
         description: data.task.description,
-        state: data.task.state,
+        status: data.task.state,
         createdAt: data.task.createdAt
       },
       createdAt: data.task.createdAt
@@ -83,7 +83,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
     const task = tasks.find(t => t.id === id)
     if (!task) throw new Error('Task not found')
 
-    const newState = record.fields?.state as string
+    const newState = record.fields?.status as string
     const fromState = task.state
 
     if (newState && newState !== fromState) {
@@ -120,17 +120,20 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
 
   const dbClient: IDataViewsClient = {
     getRecords: async () => {
-      return tasks.map(task => ({
+      const records = tasks.map(task => ({
         id: task.id,
         fields: {
           title: task.title,
           description: task.description,
           epic: task.epic || '',
-          state: task.state,
+          status: task.state,
           createdAt: task.createdAt
         },
         createdAt: task.createdAt
       }))
+      console.log('Tasks records:', JSON.stringify(records, null, 2))
+      console.log('Tasks schema:', JSON.stringify(taskSchema, null, 2))
+      return records
     },
     createRecord,
     updateRecord,
@@ -146,6 +149,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
           defaultView: 'kanban',
           language: 'en'
         }}
+        key={refreshKey}
       />
     </div>
   )

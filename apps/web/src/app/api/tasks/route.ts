@@ -147,6 +147,26 @@ state: ${state}
   }
 }
 
+function findTaskFile(baseDir: string, taskId: string): string | null {
+  if (!fs.existsSync(baseDir)) return null
+  
+  const items = fs.readdirSync(baseDir, { withFileTypes: true })
+  
+  for (const item of items) {
+    const fullPath = path.join(baseDir, item.name)
+    
+    if (item.isDirectory()) {
+      // Search recursively in subdirectories (epic folders)
+      const found = findTaskFile(fullPath, taskId)
+      if (found) return found
+    } else if (item.isFile() && item.name === `${taskId}.md`) {
+      return fullPath
+    }
+  }
+  
+  return null
+}
+
 function moveTask(repo: string, taskId: string, fromState: string, toState: string): void {
   const homeDir = (process.env.HOME || process.env.USERPROFILE || process.cwd())
   const gitDir = path.join(homeDir, 'git')
@@ -154,11 +174,31 @@ function moveTask(repo: string, taskId: string, fromState: string, toState: stri
   ensureAgelumStructure(agelumDir)
   const tasksDir = path.join(agelumDir, 'tasks')
 
-  const fromPath = path.join(tasksDir, fromState, `${taskId}.md`)
-  const toPath = path.join(tasksDir, toState, `${taskId}.md`)
+  const fromStateDir = path.join(tasksDir, fromState)
+  const fromPath = findTaskFile(fromStateDir, taskId)
+  
+  if (!fromPath) {
+    throw new Error(`Task file not found: ${taskId}`)
+  }
 
-  const toDir = path.dirname(toPath)
-  fs.mkdirSync(toDir, { recursive: true })
+  // Determine if task is in an epic folder
+  const relativePath = path.relative(fromStateDir, fromPath)
+  const pathParts = relativePath.split(path.sep)
+  
+  let toPath: string
+  if (pathParts.length > 1) {
+    // Task is in an epic folder, maintain the epic folder structure
+    const epicFolder = pathParts[0]
+    const toStateDir = path.join(tasksDir, toState)
+    const toEpicDir = path.join(toStateDir, epicFolder)
+    fs.mkdirSync(toEpicDir, { recursive: true })
+    toPath = path.join(toEpicDir, `${taskId}.md`)
+  } else {
+    // Task is at root level
+    const toStateDir = path.join(tasksDir, toState)
+    fs.mkdirSync(toStateDir, { recursive: true })
+    toPath = path.join(toStateDir, `${taskId}.md`)
+  }
 
   fs.renameSync(fromPath, toPath)
 }
@@ -196,6 +236,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to process task' }, { status: 500 })
+    console.error('Task API error:', error)
+    const message = error instanceof Error ? error.message : 'Failed to process task'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
