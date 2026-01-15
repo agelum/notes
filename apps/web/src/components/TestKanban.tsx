@@ -20,7 +20,7 @@ const testData = [
     id: '1',
     fields: {
       title: 'Test Task 1',
-      status: 'todo'
+      status: 'To Do'
     },
     createdAt: new Date().toISOString()
   },
@@ -28,7 +28,7 @@ const testData = [
     id: '2',
     fields: {
       title: 'Test Task 2',
-      status: 'doing'
+      status: 'Doing'
     },
     createdAt: new Date().toISOString()
   },
@@ -36,7 +36,7 @@ const testData = [
     id: '3',
     fields: {
       title: 'Test Task 3',
-      status: 'done'
+      status: 'Done'
     },
     createdAt: new Date().toISOString()
   }

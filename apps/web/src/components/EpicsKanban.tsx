@@ -26,6 +26,13 @@ const epicSchema: TableSchema = {
   ]
 }
 
+const epicStatusOptions = epicSchema.fields.find((f) => f.id === 'status' && f.type === 'select')?.options || []
+const epicStatusIdToName = new Map(epicStatusOptions.map((o) => [o.id, o.name]))
+const epicStatusNameToId = new Map(epicStatusOptions.map((o) => [o.name, o.id]))
+
+const toEpicUiStatus = (value: string) => epicStatusIdToName.get(value) || value
+const toEpicApiStatus = (value: string) => epicStatusNameToId.get(value) || value
+
 interface EpicsKanbanProps {
   repo: string
   onEpicSelect: (epic: Epic) => void
@@ -48,7 +55,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
   const createRecord = useCallback(async (record: Partial<IRecord>): Promise<IRecord> => {
     const title = record.fields?.title as string || 'Untitled Epic'
     const description = record.fields?.description as string || ''
-    const state = (record.fields?.status as string) || 'pending'
+    const state = toEpicApiStatus((record.fields?.status as string) || 'pending')
 
     const res = await fetch('/api/epics', {
       method: 'POST',
@@ -70,7 +77,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
       fields: {
         title: data.epic.title,
         description: data.epic.description,
-        status: data.epic.state,
+        status: toEpicUiStatus(data.epic.state),
         createdAt: data.epic.createdAt
       },
       createdAt: data.epic.createdAt
@@ -84,7 +91,9 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
     const newState = record.fields?.status as string
     const fromState = epic.state
 
-    if (newState && newState !== fromState) {
+    const toState = newState ? toEpicApiStatus(newState) : ''
+
+    if (toState && toState !== fromState) {
       const res = await fetch('/api/epics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +102,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
           action: 'move',
           epicId: id,
           fromState,
-          toState: newState
+          toState
         })
       })
 
@@ -107,7 +116,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
 
     return {
       id,
-      fields: record.fields || {},
+      fields: record.fields ? { ...record.fields, status: newState ? toEpicUiStatus(toState) : record.fields.status } : {},
       createdAt: epic.createdAt
     }
   }, [repo, epics])
@@ -142,7 +151,7 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
           fields: {
             title: epic.title,
             description: `${epic.description}\n\nStatus: ${epic.state}`,
-            status: epic.state,
+            status: toEpicUiStatus(epic.state),
             createdAt: epic.createdAt
           },
           createdAt: epic.createdAt

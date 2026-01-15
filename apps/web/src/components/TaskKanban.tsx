@@ -28,6 +28,13 @@ const taskSchema: TableSchema = {
   ]
 }
 
+const taskStatusOptions = taskSchema.fields.find((f) => f.id === 'status' && f.type === 'select')?.options || []
+const taskStatusIdToName = new Map(taskStatusOptions.map((o) => [o.id, o.name]))
+const taskStatusNameToId = new Map(taskStatusOptions.map((o) => [o.name, o.id]))
+
+const toTaskUiStatus = (value: string) => taskStatusIdToName.get(value) || value
+const toTaskApiStatus = (value: string) => taskStatusNameToId.get(value) || value
+
 interface TaskKanbanProps {
   repo: string
   onTaskSelect: (task: Task) => void
@@ -50,7 +57,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
   const createRecord = useCallback(async (record: Partial<IRecord>): Promise<IRecord> => {
     const title = record.fields?.title as string || 'Untitled Task'
     const description = record.fields?.description as string || ''
-    const state = (record.fields?.status as string) || 'pending'
+    const state = toTaskApiStatus((record.fields?.status as string) || 'pending')
 
     const res = await fetch('/api/tasks', {
       method: 'POST',
@@ -72,7 +79,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
       fields: {
         title: data.task.title,
         description: data.task.description,
-        status: data.task.state,
+        status: toTaskUiStatus(data.task.state),
         createdAt: data.task.createdAt
       },
       createdAt: data.task.createdAt
@@ -86,7 +93,9 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
     const newState = record.fields?.status as string
     const fromState = task.state
 
-    if (newState && newState !== fromState) {
+    const toState = newState ? toTaskApiStatus(newState) : ''
+
+    if (toState && toState !== fromState) {
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,7 +104,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
           action: 'move',
           taskId: id,
           fromState,
-          toState: newState
+          toState
         })
       })
 
@@ -109,7 +118,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
 
     return {
       id,
-      fields: record.fields || {},
+      fields: record.fields ? { ...record.fields, status: newState ? toTaskUiStatus(toState) : record.fields.status } : {},
       createdAt: task.createdAt
     }
   }, [repo, tasks])
@@ -126,7 +135,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
           title: task.title,
           description: task.description,
           epic: task.epic || '',
-          status: task.state,
+          status: toTaskUiStatus(task.state),
           createdAt: task.createdAt
         },
         createdAt: task.createdAt
