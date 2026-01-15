@@ -3,22 +3,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { DataViews, tableSchema, type IRecord, type IDataViewsClient, type TableSchema } from 'shadcn-data-views'
 
-interface Task {
+interface Epic {
   id: string
   title: string
   description: string
   state: 'pending' | 'doing' | 'done'
   createdAt: string
-  epic?: string
 }
 
-const taskSchema: TableSchema = {
-  id: 'tasks',
-  name: 'Tasks',
+const epicSchema: TableSchema = {
+  id: 'epics',
+  name: 'Epics',
   fields: [
     { id: 'title', name: 'Title', type: 'text', isPrimary: true },
     { id: 'description', name: 'Description', type: 'text' },
-    { id: 'epic', name: 'Epic', type: 'text' },
     { id: 'state', name: 'Status', type: 'select', options: [
       { id: 'pending', name: 'Pending', color: 'yellow' },
       { id: 'doing', name: 'Doing', color: 'blue' },
@@ -28,31 +26,31 @@ const taskSchema: TableSchema = {
   ]
 }
 
-interface TaskKanbanProps {
+interface EpicsKanbanProps {
   repo: string
-  onTaskSelect: (task: Task) => void
+  onEpicSelect: (epic: Epic) => void
 }
 
-export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
-  const [tasks, setTasks] = useState<Task[]>([])
+export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
+  const [epics, setEpics] = useState<Epic[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const fetchTasks = useCallback(async () => {
-    const res = await fetch(`/api/tasks?repo=${encodeURIComponent(repo)}`)
+  const fetchEpics = useCallback(async () => {
+    const res = await fetch(`/api/epics?repo=${encodeURIComponent(repo)}`)
     const data = await res.json()
-    setTasks(data.tasks || [])
+    setEpics(data.epics || [])
   }, [repo])
 
   useEffect(() => {
-    fetchTasks()
-  }, [fetchTasks, refreshKey])
+    fetchEpics()
+  }, [fetchEpics, refreshKey])
 
   const createRecord = useCallback(async (record: Partial<IRecord>): Promise<IRecord> => {
-    const title = record.fields?.title as string || 'Untitled Task'
+    const title = record.fields?.title as string || 'Untitled Epic'
     const description = record.fields?.description as string || ''
     const state = (record.fields?.state as string) || 'pending'
 
-    const res = await fetch('/api/tasks', {
+    const res = await fetch('/api/epics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -63,37 +61,37 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
     })
 
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Failed to create task')
+    if (!res.ok) throw new Error(data.error || 'Failed to create epic')
 
     setRefreshKey(k => k + 1)
 
     return {
-      id: data.task.id,
+      id: data.epic.id,
       fields: {
-        title: data.task.title,
-        description: data.task.description,
-        state: data.task.state,
-        createdAt: data.task.createdAt
+        title: data.epic.title,
+        description: data.epic.description,
+        state: data.epic.state,
+        createdAt: data.epic.createdAt
       },
-      createdAt: data.task.createdAt
+      createdAt: data.epic.createdAt
     }
   }, [repo])
 
   const updateRecord = useCallback(async (id: string, record: Partial<IRecord>): Promise<IRecord> => {
-    const task = tasks.find(t => t.id === id)
-    if (!task) throw new Error('Task not found')
+    const epic = epics.find(e => e.id === id)
+    if (!epic) throw new Error('Epic not found')
 
     const newState = record.fields?.state as string
-    const fromState = task.state
+    const fromState = epic.state
 
     if (newState && newState !== fromState) {
-      const res = await fetch('/api/tasks', {
+      const res = await fetch('/api/epics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           repo,
           action: 'move',
-          taskId: id,
+          epicId: id,
           fromState,
           toState: newState
         })
@@ -101,7 +99,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Failed to move task')
+        throw new Error(data.error || 'Failed to move epic')
       }
     }
 
@@ -110,9 +108,9 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
     return {
       id,
       fields: record.fields || {},
-      createdAt: task.createdAt
+      createdAt: epic.createdAt
     }
-  }, [repo, tasks])
+  }, [repo, epics])
 
   const deleteRecord = useCallback(async (_id: string): Promise<void> => {
     // Implement if needed
@@ -120,16 +118,15 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
 
   const dbClient: IDataViewsClient = {
     getRecords: async () => {
-      return tasks.map(task => ({
-        id: task.id,
+      return epics.map(epic => ({
+        id: epic.id,
         fields: {
-          title: task.title,
-          description: task.description,
-          epic: task.epic || '',
-          state: task.state,
-          createdAt: task.createdAt
+          title: epic.title,
+          description: epic.description,
+          state: epic.state,
+          createdAt: epic.createdAt
         },
-        createdAt: task.createdAt
+        createdAt: epic.createdAt
       }))
     },
     createRecord,
@@ -140,7 +137,7 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
   return (
     <div className="h-full dataviews-hide-header">
       <DataViews
-        schema={taskSchema}
+        schema={epicSchema}
         dbClient={dbClient}
         config={{
           defaultView: 'kanban',

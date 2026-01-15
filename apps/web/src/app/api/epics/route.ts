@@ -2,32 +2,21 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-interface Task {
+interface Epic {
   id: string
   title: string
   description: string
   state: 'pending' | 'doing' | 'done'
   createdAt: string
-  epic?: string
 }
 
-function ensureAgelumStructure(agelumDir: string) {
+function ensureEpicStructure(agelumDir: string) {
   const directories = [
-    'plan',
-    'ideas',
-    'docs',
-    'context',
-    'actions',
-    'skills',
     path.join('epics', 'pending'),
     path.join('epics', 'doing'),
-    path.join('epics', 'done'),
-    path.join('tasks', 'doing'),
-    path.join('tasks', 'done'),
-    path.join('tasks', 'pending')
+    path.join('epics', 'done')
   ]
 
-  fs.mkdirSync(agelumDir, { recursive: true })
   for (const dir of directories) {
     fs.mkdirSync(path.join(agelumDir, dir), { recursive: true })
   }
@@ -37,7 +26,7 @@ function fileNameToId(fileName: string): string {
   return fileName.replace('.md', '')
 }
 
-function parseTaskFile(filePath: string, state: 'pending' | 'doing' | 'done', epic?: string): Task | null {
+function parseEpicFile(filePath: string, state: 'pending' | 'doing' | 'done'): Epic | null {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
     const fileName = path.basename(filePath)
@@ -61,69 +50,48 @@ function parseTaskFile(filePath: string, state: 'pending' | 'doing' | 'done', ep
       title,
       description,
       state,
-      createdAt: stats.mtime.toISOString(),
-      ...(epic && { epic })
+      createdAt: stats.mtime.toISOString()
     }
   } catch {
     return null
   }
 }
 
-function readTasksRecursively(dir: string, state: 'pending' | 'doing' | 'done', baseDir: string): Task[] {
-  const tasks: Task[] = []
-  
-  if (!fs.existsSync(dir)) return tasks
-
-  const items = fs.readdirSync(dir, { withFileTypes: true })
-  
-  for (const item of items) {
-    const fullPath = path.join(dir, item.name)
-    
-    if (item.isDirectory()) {
-      // This is an epic folder, read tasks from it
-      const epicName = item.name
-      const epicTasks = readTasksRecursively(fullPath, state, baseDir)
-      // Add epic name to each task
-      tasks.push(...epicTasks.map(task => ({ ...task, epic: epicName })))
-    } else if (item.isFile() && item.name.endsWith('.md')) {
-      // This is a task file at the root level (no epic)
-      const task = parseTaskFile(fullPath, state)
-      if (task) tasks.push(task)
-    }
-  }
-  
-  return tasks
-}
-
-function readTasks(repo: string): Task[] {
+function readEpics(repo: string): Epic[] {
   const homeDir = (process.env.HOME || process.env.USERPROFILE || process.cwd())
   const gitDir = path.join(homeDir, 'git')
   const agelumDir = path.join(gitDir, repo, 'agelum')
-  ensureAgelumStructure(agelumDir)
-  const tasksDir = path.join(agelumDir, 'tasks')
+  ensureEpicStructure(agelumDir)
+  const epicsDir = path.join(agelumDir, 'epics')
 
-  const tasks: Task[] = []
+  const epics: Epic[] = []
   const states = ['pending', 'doing', 'done'] as const
 
   for (const state of states) {
-    const stateDir = path.join(tasksDir, state)
-    const stateTasks = readTasksRecursively(stateDir, state, stateDir)
-    tasks.push(...stateTasks)
+    const stateDir = path.join(epicsDir, state)
+    if (!fs.existsSync(stateDir)) continue
+
+    const files = fs.readdirSync(stateDir)
+    for (const file of files) {
+      if (!file.endsWith('.md')) continue
+      const epic = parseEpicFile(path.join(stateDir, file), state)
+      if (epic) epics.push(epic)
+    }
   }
 
-  return tasks
+  return epics
 }
 
-function createTask(repo: string, data: { title: string; description?: string; state?: string }): Task {
+function createEpic(repo: string, data: { title: string; description?: string; state?: string }): Epic {
   const homeDir = (process.env.HOME || process.env.USERPROFILE || process.cwd())
   const gitDir = path.join(homeDir, 'git')
   const agelumDir = path.join(gitDir, repo, 'agelum')
-  ensureAgelumStructure(agelumDir)
-  const tasksDir = path.join(agelumDir, 'tasks')
+  ensureEpicStructure(agelumDir)
+  const epicsDir = path.join(agelumDir, 'epics')
   const state = (data.state as 'pending' | 'doing' | 'done') || 'pending'
 
-  const id = `task-${Date.now()}`
-  const stateDir = path.join(tasksDir, state)
+  const id = `epic-${Date.now()}`
+  const stateDir = path.join(epicsDir, state)
   fs.mkdirSync(stateDir, { recursive: true })
 
   const filePath = path.join(stateDir, `${id}.md`)
@@ -147,15 +115,15 @@ state: ${state}
   }
 }
 
-function moveTask(repo: string, taskId: string, fromState: string, toState: string): void {
+function moveEpic(repo: string, epicId: string, fromState: string, toState: string): void {
   const homeDir = (process.env.HOME || process.env.USERPROFILE || process.cwd())
   const gitDir = path.join(homeDir, 'git')
   const agelumDir = path.join(gitDir, repo, 'agelum')
-  ensureAgelumStructure(agelumDir)
-  const tasksDir = path.join(agelumDir, 'tasks')
+  ensureEpicStructure(agelumDir)
+  const epicsDir = path.join(agelumDir, 'epics')
 
-  const fromPath = path.join(tasksDir, fromState, `${taskId}.md`)
-  const toPath = path.join(tasksDir, toState, `${taskId}.md`)
+  const fromPath = path.join(epicsDir, fromState, `${epicId}.md`)
+  const toPath = path.join(epicsDir, toState, `${epicId}.md`)
 
   const toDir = path.dirname(toPath)
   fs.mkdirSync(toDir, { recursive: true })
@@ -168,34 +136,34 @@ export async function GET(request: Request) {
   const repo = searchParams.get('repo')
 
   if (!repo) {
-    return NextResponse.json({ tasks: [] })
+    return NextResponse.json({ epics: [] })
   }
 
-  const tasks = readTasks(repo)
-  return NextResponse.json({ tasks })
+  const epics = readEpics(repo)
+  return NextResponse.json({ epics })
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { repo, action, taskId, fromState, toState, data } = body
+    const { repo, action, epicId, fromState, toState, data } = body
 
     if (!repo) {
       return NextResponse.json({ error: 'Repository is required' }, { status: 400 })
     }
 
     if (action === 'create') {
-      const task = createTask(repo, data || {})
-      return NextResponse.json({ task })
+      const epic = createEpic(repo, data || {})
+      return NextResponse.json({ epic })
     }
 
-    if (action === 'move' && taskId && fromState && toState) {
-      moveTask(repo, taskId, fromState, toState)
+    if (action === 'move' && epicId && fromState && toState) {
+      moveEpic(repo, epicId, fromState, toState)
       return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to process task' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to process epic' }, { status: 500 })
   }
 }
