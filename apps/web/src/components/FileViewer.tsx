@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Edit, Save, X } from 'lucide-react'
+import { FileText, Edit, Save, X, ArrowLeft } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import '@uiw/react-md-editor/markdown-editor.css'
 import '@uiw/react-markdown-preview/markdown.css'
@@ -19,9 +19,10 @@ const MarkdownPreview = dynamic(
 interface FileViewerProps {
   file: { path: string; content: string } | null
   onFileSaved?: () => void
+  onBack?: () => void
 }
 
-export default function FileViewer({ file, onFileSaved }: FileViewerProps) {
+export default function FileViewer({ file, onFileSaved, onBack }: FileViewerProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [content, setContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -75,6 +76,14 @@ export default function FileViewer({ file, onFileSaved }: FileViewerProps) {
     <div className="flex-1 flex flex-col bg-gray-900">
       <div className="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
         <div className="flex items-center gap-2">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="p-1 mr-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <FileText className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-medium text-gray-200 truncate">{file.path.split('/').pop()}</span>
         </div>

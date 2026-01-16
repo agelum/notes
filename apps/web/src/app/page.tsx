@@ -236,21 +236,33 @@ export default function Home() {
             </>
           ) : viewMode === "epics" ? (
             <div className="flex-1 bg-background">
-              {selectedRepo && (
+              {selectedFile ? (
+                <FileViewer
+                  file={selectedFile}
+                  onFileSaved={loadFileTree}
+                  onBack={() => setSelectedFile(null)}
+                />
+              ) : selectedRepo ? (
                 <EpicsKanban
                   repo={selectedRepo}
                   onEpicSelect={handleEpicSelect}
                 />
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="flex-1 bg-background">
-              {selectedRepo && (
+              {selectedFile ? (
+                <FileViewer
+                  file={selectedFile}
+                  onFileSaved={loadFileTree}
+                  onBack={() => setSelectedFile(null)}
+                />
+              ) : selectedRepo ? (
                 <TaskKanban
                   repo={selectedRepo}
                   onTaskSelect={handleTaskSelect}
                 />
-              )}
+              ) : null}
             </div>
           )}
         </div>

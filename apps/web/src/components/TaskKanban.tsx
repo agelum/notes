@@ -159,6 +159,10 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
           language: 'en'
         }}
         key={refreshKey}
+        onRecordClick={(record: IRecord) => {
+          const task = tasks.find((t) => t.id === record.id)
+          if (task) onTaskSelect(task)
+        }}
       />
     </div>
   )

@@ -158,6 +158,10 @@ export default function EpicsKanban({ repo, onEpicSelect }: EpicsKanbanProps) {
           language: 'en'
         }}
         key={refreshKey}
+        onRecordClick={(record: IRecord) => {
+          const epic = epics.find((e) => e.id === record.id)
+          if (epic) onEpicSelect(epic)
+        }}
       />
     </div>
   )
