@@ -15,8 +15,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Button, TooltipProvider } from '@agelum/shadcn';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCardOverlay } from './KanbanCard';
 import type {
