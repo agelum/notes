@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { DataViews, tableSchema, type IRecord, type IDataViewsClient, type TableSchema } from 'shadcn-data-views'
+import { DataViews, tableSchema, type IRecord, type IDataViewsClient, type TableSchema } from 'kanban'
 
 interface Epic {
   id: string
