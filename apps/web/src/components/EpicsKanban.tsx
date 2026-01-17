@@ -13,9 +13,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Textarea,
-  Button
+  Textarea
 } from '@agelum/kanban'
+import { Button } from '@agelum/shadcn'
 
 interface Epic {
   id: string

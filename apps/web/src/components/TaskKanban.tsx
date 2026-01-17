@@ -13,9 +13,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Textarea,
-  Button
+  Textarea
 } from '@agelum/kanban'
+import { Button } from '@agelum/shadcn'
 
 interface Task {
   id: string
@@ -160,41 +160,96 @@ export default function TaskKanban({ repo, onTaskSelect }: TaskKanbanProps) {
   )
 
   return (
-    <div className="h-full">
-      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border">
-        <label className="text-sm text-muted-foreground" htmlFor="assignee-filter">
-          Assignee
-        </label>
-        <select
-          id="assignee-filter"
-          value={assigneeFilter}
-          onChange={(e) => setAssigneeFilter(e.target.value)}
-          className="bg-background text-foreground text-sm rounded-md border border-border px-2 py-1"
-        >
-          <option value="all">All</option>
-          <option value="unassigned">Unassigned</option>
-          {users.map((user) => (
-            <option key={user} value={user}>
-              {user}
-            </option>
-          ))}
-        </select>
+    <>
+      <div className="h-full">
+        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border">
+          <label className="text-sm text-muted-foreground" htmlFor="assignee-filter">
+            Assignee
+          </label>
+          <select
+            id="assignee-filter"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            className="bg-background text-foreground text-sm rounded-md border border-border px-2 py-1"
+          >
+            <option value="all">All</option>
+            <option value="unassigned">Unassigned</option>
+            {users.map((user) => (
+              <option key={user} value={user}>
+                {user}
+              </option>
+            ))}
+          </select>
+        </div>
+        <KanbanBoard
+          columns={columns}
+          cards={cards}
+          onAddCard={handleAddCard}
+          onCardMove={handleCardMove}
+          onCardClick={(card: KanbanCardType) => {
+            const task = tasks.find((t) => t.id === card.id)
+            if (task) onTaskSelect(task)
+          }}
+          onCardEdit={(card: KanbanCardType) => {
+            const task = tasks.find((t) => t.id === card.id)
+            if (task) onTaskSelect(task)
+          }}
+          key={refreshKey}
+        />
       </div>
-      <KanbanBoard
-        columns={columns}
-        cards={cards}
-        onAddCard={handleAddCard}
-        onCardMove={handleCardMove}
-        onCardClick={(card: KanbanCardType) => {
-          const task = tasks.find((t) => t.id === card.id)
-          if (task) onTaskSelect(task)
-        }}
-        onCardEdit={(card: KanbanCardType) => {
-          const task = tasks.find((t) => t.id === card.id)
-          if (task) onTaskSelect(task)
-        }}
-        key={refreshKey}
-      />
-    </div>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+            <DialogDescription>
+              Add a new task to {columns.find(c => c.id === newTaskColumn)?.title || 'the board'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="task-title">Title</Label>
+              <Input
+                id="task-title"
+                placeholder="Task title"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleCreateTask()
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="task-description">Description</Label>
+              <Textarea
+                id="task-description"
+                placeholder="Task description (optional)"
+                value={newTaskDescription}
+                onChange={(e) => setNewTaskDescription(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsAddDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateTask}
+              disabled={!newTaskTitle.trim()}
+            >
+              Create Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
